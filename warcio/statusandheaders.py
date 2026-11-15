@@ -30,6 +30,10 @@ class StatusAndHeaders(object):
         self.protocol = protocol
         self.total_len = total_len
         self.headers_buff = None
+        # False while the object still reflects the bytes it was parsed from;
+        # set to True by any mutating call so callers (e.g. WARCWriter) can
+        # tell that a stored WARC-Block-Digest may no longer be valid.
+        self.modified = False
 
     def get_header(self, name, default_value=None):
         """
@@ -45,6 +49,7 @@ class StatusAndHeaders(object):
 
     def add_header(self, name, value):
         self.headers.append((name, value))
+        self.modified = True
 
     def replace_header(self, name, value):
         """
@@ -56,9 +61,11 @@ class StatusAndHeaders(object):
             curr_name, curr_value = self.headers[index]
             if curr_name.lower() == name_lower:
                 self.headers[index] = (curr_name, value)
+                self.modified = True
                 return curr_value
 
         self.headers.append((name, value))
+        self.modified = True
         return None
 
     def remove_header(self, name):
@@ -70,6 +77,7 @@ class StatusAndHeaders(object):
         for index in range(len(self.headers) - 1, -1, -1):
             if self.headers[index][0].lower() == name_lower:
                 del self.headers[index]
+                self.modified = True
                 return True
 
         return False

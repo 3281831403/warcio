@@ -45,6 +45,14 @@ class BaseWARCWriter(RecordBuilder):
         if record.http_headers:
             record.http_headers.compute_headers_buffer(self.header_filter)
 
+        # If the http headers of a record read from an archive were mutated,
+        # the stored WARC-Block-Digest no longer matches the bytes that will
+        # be written. Drop it so ensure_digest() recomputes it below from the
+        # actual http_headers_buff + payload.
+        if record.http_headers is not None and getattr(
+                record.http_headers, 'modified', False):
+            record.rec_headers.remove_header('WARC-Block-Digest')
+
         # Content-Length is None/unknown
         # Fix record by: buffering and recomputing all digests and length
         # (since no length, can't trust existing digests)
